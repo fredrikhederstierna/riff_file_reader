@@ -34,11 +34,17 @@
 
 //------------------------------------------------------------------
 
-// File header magic
-#define RIFF_FILE_TYPE_CHUNK_MAGIC       "RIFF"
+// File and chunk header magic ID
+#define RIFF_FILE_TYPE_FILE_MAGIC     "RIFF"
+#define RIFF_FILE_TYPE_LIST_MAGIC     "LIST"
+#define RIFF_FILE_TYPE_INFO_MAGIC     "INFO"
+// just for testing, added AVI movi ID
+#define RIFF_FILE_TYPE_AVI_MOVI_MAGIC "movi"
 
 // Max allowed nested LIST chunks
 #define RIFF_FILE_NESTED_LIST_MAX_LEVELS (10)
+
+//------------------------------------------------------------------
 
 // Struct describing RIFF file
 struct riff_file_s
@@ -53,7 +59,7 @@ struct riff_file_iterator_s
 {
   struct riff_file_s *file;
   char *addr;
-  int list_level;
+  int    list_level;
   size_t list_size[RIFF_FILE_NESTED_LIST_MAX_LEVELS];
   riff_file_list_chunk_start_fn_t list_start_cb;
   riff_file_list_chunk_end_fn_t   list_end_cb;
@@ -120,7 +126,7 @@ riff_file_h riff_file_open(const char *filename, const char type[4])
   struct riff_file_header_chunk_s *header = (struct riff_file_header_chunk_s *)f->vaddr;
 
   // check type and format
-  if ((memcmp(header->id, "RIFF", 4) != 0) ||
+  if ((memcmp(header->id, RIFF_FILE_TYPE_FILE_MAGIC, 4) != 0) ||
       (memcmp(header->format, type, 4) != 0)) {
     fprintf(stderr, "no valid riff header\n");
     int res = munmap(0, f->size);
@@ -142,20 +148,17 @@ riff_file_data_chunk_iterator_h riff_file_data_chunk_iterator_new(riff_file_h fi
 {
   struct riff_file_s *f = (struct riff_file_s *)file_h;
   if (f != NULL) {
-
     struct riff_file_iterator_s *it = (struct riff_file_iterator_s *)malloc(sizeof(struct riff_file_iterator_s));
     if (it == NULL) {
       perror("malloc file iterator failed");
       return NULL;
     }
-
     it->file = f;
     it->addr = ((char*)f->vaddr) + sizeof(struct riff_file_header_chunk_s);
     it->list_level    = 0;
     it->list_size[0]  = f->size - sizeof(struct riff_file_header_chunk_s);
     it->list_start_cb = list_start_cb;
     it->list_end_cb   = list_end_cb;
-    
     return it;
   }
   else {
@@ -180,7 +183,7 @@ static void sub_all_lists(struct riff_file_iterator_s *it, int len)
       it->list_size[i] -= len;
     }
     else {
-      // https://www.recordingblogs.com/wiki/list-chunk-of-a-wave-file
+      // @see https://www.recordingblogs.com/wiki/list-chunk-of-a-wave-file
       perror("LIST chunk size underflow error");
       printf("!!! SUBLIST[%d] UNDERFLOW ERROR !!! LEFT %d LEN %d\n", i, (int)it->list_size[i], len);
       it->list_size[i] = 0;
@@ -209,7 +212,7 @@ struct riff_file_data_subchunk_s* riff_file_data_chunk_iterator_next(riff_file_d
   }
 
   // check if list chunk
-  if (memcmp(cur_addr, "LIST", 4) == 0) {
+  if (memcmp(cur_addr, RIFF_FILE_TYPE_LIST_MAGIC, 4) == 0) {
     // list
     struct riff_file_list_chunk_s *list = (struct riff_file_list_chunk_s *)cur_addr;
 
@@ -223,7 +226,7 @@ struct riff_file_data_subchunk_s* riff_file_data_chunk_iterator_next(riff_file_d
     it->list_size[ it->list_level ] = list->size;
 
     // if AVI movi tag, just skip data
-    if (memcmp(list->type, "movi", 4) == 0) {
+    if (memcmp(list->type, RIFF_FILE_TYPE_AVI_MOVI_MAGIC, 4) == 0) {
       it->addr += list->size;
       sub_all_lists(it, list->size);
     }
@@ -239,7 +242,7 @@ struct riff_file_data_subchunk_s* riff_file_data_chunk_iterator_next(riff_file_d
 
     return riff_file_data_chunk_iterator_next(iter_h);
   }
-  else if (memcmp(cur_addr, "INFO", 4) == 0) {
+  else if (memcmp(cur_addr, RIFF_FILE_TYPE_INFO_MAGIC, 4) == 0) {
     it->addr += 4;
     sub_all_lists(it, 4);
     return riff_file_data_chunk_iterator_next(iter_h);
