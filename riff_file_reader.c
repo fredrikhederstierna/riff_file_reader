@@ -38,7 +38,7 @@
 #define RIFF_FILE_TYPE_FILE_MAGIC     "RIFF"
 #define RIFF_FILE_TYPE_LIST_MAGIC     "LIST"
 #define RIFF_FILE_TYPE_INFO_MAGIC     "INFO"
-// just for testing, added AVI movi ID
+// (just for testing, added AVI movi ID)
 #define RIFF_FILE_TYPE_AVI_MOVI_MAGIC "movi"
 
 // Max allowed nested LIST chunks
@@ -75,43 +75,43 @@ riff_file_h riff_file_open(const char *filename, const char type[4])
   }
 
   // try open file
-  int dumpfd = open(filename, O_RDONLY);
-  if (dumpfd < 0) {
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0) {
     perror("file open failed");
     free(f);
     return NULL;
   }
 
   // get file size
-  struct stat st;
-  if (fstat(dumpfd, &st) != 0) {
+  struct stat fst;
+  if (fstat(fd, &fst) != 0) {
     perror("file stat failed");
     free(f);
     return NULL;
   }
-  f->size = st.st_size;
+  f->size = fst.st_size;
 
   // memory map file
-  void *dump_addr = mmap(0,           //addr
+  void *file_addr = mmap(0,           //addr
                          f->size,     //length
                          PROT_READ,   //prot
                          MAP_PRIVATE, //flags
-                         dumpfd,      //fd
+                         fd,          //fd
                          0            //offset 
                          );
-  if (dump_addr == MAP_FAILED) {
+  if (file_addr == MAP_FAILED) {
     perror("mmap file failed");
-    close(dumpfd);
+    close(fd);
     free(f);
     return NULL;
   }
   else {
-    close(dumpfd);
+    close(fd);
   }
 
   // check headers and sizes
-  void *dump_end = dump_addr + f->size;
-  if ((dump_end - dump_addr) < (int)sizeof(struct riff_file_header_chunk_s)) {
+  void *file_end = file_addr + f->size;
+  if ((file_end - file_addr) < (int)sizeof(struct riff_file_header_chunk_s)) {
     fprintf(stderr, "riff header too short\n");
     int res = munmap(0, f->size);
     if (res != 0) {
@@ -120,7 +120,7 @@ riff_file_h riff_file_open(const char *filename, const char type[4])
     free(f);
     return NULL;
   }
-  f->vaddr = dump_addr;
+  f->vaddr = file_addr;
 
   // check header
   struct riff_file_header_chunk_s *header = (struct riff_file_header_chunk_s *)f->vaddr;

@@ -7,6 +7,7 @@
  *
  * Fredrik Hederstierna 2021
  *
+ * RIFF format is used in several popular formats as WAV, AVI, WEBP.
  * More info on RIFF at
  * https://en.wikipedia.org/wiki/Resource_Interchange_File_Format
  *
