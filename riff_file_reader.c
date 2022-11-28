@@ -129,6 +129,12 @@ riff_file_h riff_file_open(const char *filename, const char type[4])
   if ((memcmp(header->id, RIFF_FILE_TYPE_FILE_MAGIC, 4) != 0) ||
       (memcmp(header->format, type, 4) != 0)) {
     fprintf(stderr, "no valid riff header\n");
+    fprintf(stderr, "id 0x%02x:0x%02x:0x%02x:0x%02x \"%c%c%c%c\"\n",
+            header->id[0], header->id[1], header->id[2], header->id[3],
+            header->id[0], header->id[1], header->id[2], header->id[3]);
+    fprintf(stderr, "format 0x%02x:0x%02x:0x%02x:0x%02x \"%c%c%c%c\"\n",
+            header->format[0], header->format[1], header->format[2], header->format[3],
+            header->format[0], header->format[1], header->format[2], header->format[3]);
     int res = munmap(0, f->size);
     if (res != 0) {
       perror("file munmap failed");
